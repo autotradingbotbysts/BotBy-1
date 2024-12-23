@@ -4,7 +4,7 @@ using EbestTradeBot.Client.EventArgs;
 using EbestTradeBot.Client.Services.Log;
 using EbestTradeBot.Client.Services.OpenApi;
 using EbestTradeBot.Client.Services.XingApi;
-using EbestTradeBot.Shared.Models.Log;
+using EbestTradeBot.Shared.Exceptions;
 using EbestTradeBot.Shared.Models.Trade;
 using Microsoft.Extensions.Options;
 using System;
@@ -70,8 +70,7 @@ namespace EbestTradeBot.Client.Services.Trade
                 // 09:00 ~ 15:30 일경우 StopTrade() 호출
                 if (now.Hour < 9 || now.TimeOfDay >= new TimeSpan(15, 31, 00))
                 {
-                    await StopTrade();
-                    break;
+                    throw new MarketClosedException();
                 }
 
                 Task? buyTask = null;
@@ -100,7 +99,6 @@ namespace EbestTradeBot.Client.Services.Trade
                         foreach (var stock in searchedStocks)
                         {
                             if (
-                                !(stock.현재가 > stock.익절가 || stock.현재가 < stock.손절가) && // 익절가, 손절가 범위 내
                                 !accountStocksForBuying.Any(x => x.Shcode == stock.Shcode) && // 보유중인 종목이 아님
                                 !tradingStocks.Contains(stock.Shcode)) // 현재 매매중인 종목이 아님
                             {
@@ -148,6 +146,10 @@ namespace EbestTradeBot.Client.Services.Trade
                             }
                         }
                     });
+                }
+                catch(MarketClosedException) // 장종료 시
+                {
+                    continue;
                 }
                 catch(Exception)
                 {
@@ -248,6 +250,7 @@ namespace EbestTradeBot.Client.Services.Trade
                 Date = DateTime.Now.ToString("yyyyMMdd"),
                 Hname = x.Hname,
                 Shcode = x.Shcode,
+                평단가 = x.평단가,
                 매수가_2차 = x.매수가_2차,
                 익절가 = x.익절가,
                 손절가 = x.손절가
