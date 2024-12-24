@@ -75,7 +75,7 @@ namespace EbestTradeBot.Client.Services.Trade
                 {
                     DateTime now = DateTime.Now;
                     // 09:00 ~ 15:30 일경우 StopTrade() 호출
-                    if (now.Hour < 9 || now.TimeOfDay >= new TimeSpan(15, 31, 00))
+                    if (now.Hour < 9 || now.TimeOfDay >= new TimeSpan(15, 15, 00))
                     {
                         throw new MarketClosedException();
                     }
@@ -148,6 +148,11 @@ namespace EbestTradeBot.Client.Services.Trade
                 }
                 catch(MarketClosedException) // 장종료 시
                 {
+                    var now = DateTime.Now;
+                    if(now.TimeOfDay >= new TimeSpan(15, 15, 00))
+                    {
+                        await SellAllStocks();
+                    }
                     continue;
                 }
                 catch(Exception)
@@ -189,6 +194,28 @@ namespace EbestTradeBot.Client.Services.Trade
             StopTradeEvent?.Invoke(this, new());
 
             WriteLog?.Invoke(this, new LogEventArgs("매매를 성공적으로 종료했습니다."));
+        }
+
+        private async Task SellAllStocks()
+        {
+            var accountStocks = await GetAccountStocks();
+            if (_cancellationTokenSource.Token.IsCancellationRequested) return;
+
+            var tradingStocks = await GetTradingShcodes();
+            if (_cancellationTokenSource.Token.IsCancellationRequested) return;
+
+            foreach (var stock in accountStocks)
+            {
+                if (
+                    !tradingStocks.Contains(stock.Shcode)) // 현재 매매중인 종목이 아님
+                {
+                    // 매도
+                    WriteLog?.Invoke(this, new LogEventArgs($"[{stock.Hname}({stock.Shcode})] [매도]"));
+                    await _log.WriteLog(new() { StockName = stock.Hname, Note = "매도" });
+                    await SellStock(stock);
+                    if (_cancellationTokenSource.Token.IsCancellationRequested) break;
+                }
+            }
         }
 
         private async Task<List<string>> GetTradingShcodes()
