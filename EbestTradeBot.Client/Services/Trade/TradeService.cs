@@ -60,7 +60,7 @@ namespace EbestTradeBot.Client.Services.Trade
         {
             WriteLog?.Invoke(this, new LogEventArgs("매매를 시작합니다."));
             _cancellationTokenSource = new();
-            await _openApi.InitToken(_cancellationTokenSource.Token);
+            await InitToken();
             if (_cancellationTokenSource.Token.IsCancellationRequested) return;
 
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
@@ -103,7 +103,7 @@ namespace EbestTradeBot.Client.Services.Trade
                             {
                                 // 매수
                                 WriteLog?.Invoke(this, new LogEventArgs($"[{stock.Hname}({stock.Shcode})] [1차 매수]"));
-                                await _log.WriteLog(new() { StockName = stock.Hname, Note = "1차 매수" });
+                                await _log.WriteLog(new() { StockName = stock.Hname, StockCode = stock.Shcode, Note = "1차 매수" });
                                 await BuyStock(stock);
                                 if (_cancellationTokenSource.Token.IsCancellationRequested) break;
                             }
@@ -122,7 +122,7 @@ namespace EbestTradeBot.Client.Services.Trade
                             {
                                 // 매수
                                 WriteLog?.Invoke(this, new LogEventArgs($"[{stock.Hname}({stock.Shcode})] [2차 매수]"));
-                                await _log.WriteLog(new() { StockName = stock.Hname, Note = "2차 매수" });
+                                await _log.WriteLog(new() { StockName = stock.Hname, StockCode = stock.Shcode, Note = "2차 매수" });
                                 await BuyStock(stock);
                                 if (_cancellationTokenSource.Token.IsCancellationRequested) break;
                             }
@@ -139,14 +139,23 @@ namespace EbestTradeBot.Client.Services.Trade
                             {
                                 // 매도
                                 WriteLog?.Invoke(this, new LogEventArgs($"[{stock.Hname}({stock.Shcode})] [매도]"));
-                                await _log.WriteLog(new() { StockName = stock.Hname, Note = "매도" });
+                                await _log.WriteLog(new() { StockName = stock.Hname, StockCode = stock.Shcode, Note = "매도" });
                                 await SellStock(stock);
                                 if (_cancellationTokenSource.Token.IsCancellationRequested) break;
                             }
                         }
                     });
                 }
-                catch(MarketClosedException) // 장종료 시
+                catch (ArgumentException ex)
+                {
+                    WriteLog?.Invoke(this, new LogEventArgs(ex.Message));
+                }
+                catch (InvalidTokenException ex)
+                {
+                    WriteLog?.Invoke(this, new LogEventArgs($"[{ex.Code}] {ex.Message}"));
+                    await InitToken();
+                }
+                catch (MarketClosedException) // 장종료 시
                 {
                     var now = DateTime.Now;
                     if(now.TimeOfDay >= new TimeSpan(15, 15, 00))
@@ -196,6 +205,18 @@ namespace EbestTradeBot.Client.Services.Trade
             WriteLog?.Invoke(this, new LogEventArgs("매매를 성공적으로 종료했습니다."));
         }
 
+        private async Task RevokeToken()
+        {
+            await _openApi.RevokeToken();
+            WriteLog?.Invoke(this, new LogEventArgs("토큰을 성공적으로 폐기했습니다."));
+        }
+
+        private async Task InitToken()
+        {
+            await _openApi.InitToken(_cancellationTokenSource.Token);
+            WriteLog?.Invoke(this, new LogEventArgs("토큰을 성공적으로 초기화했습니다."));
+        }
+
         private async Task SellAllStocks()
         {
             var accountStocks = await GetAccountStocks();
@@ -211,7 +232,7 @@ namespace EbestTradeBot.Client.Services.Trade
                 {
                     // 매도
                     WriteLog?.Invoke(this, new LogEventArgs($"[{stock.Hname}({stock.Shcode})] [매도]"));
-                    await _log.WriteLog(new() { StockName = stock.Hname, Note = "매도" });
+                    await _log.WriteLog(new() { StockName = stock.Hname, StockCode = stock.Shcode, Note = "매도" });
                     await SellStock(stock);
                     if (_cancellationTokenSource.Token.IsCancellationRequested) break;
                 }
