@@ -393,7 +393,7 @@ namespace EbestTradeBot.Client.Services.Trade
 
         private bool CheckFirstTrade(Stock stock)
         {
-            return (_defaultOptions.TradePrice * (decimal)1.1) - (stock.평단가 * stock.보유량) < 0;
+            return (_defaultOptions.TradePrice * (decimal)1.1) - (stock.평단가 * stock.보유량) > 0;
         }
 
         private static List<Stock> DeepCopyStocks(List<Stock> original)
