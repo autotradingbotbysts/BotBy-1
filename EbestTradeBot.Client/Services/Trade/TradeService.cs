@@ -73,9 +73,12 @@ namespace EbestTradeBot.Client.Services.Trade
 
                 try
                 {
-                    DateTime now = DateTime.Now;
+                    var now = DateTime.Now;
+                    var startTime = _defaultOptions.StartTime.TimeOfDay;
+                    var endTime = _defaultOptions.EndTime.TimeOfDay;
+
                     // 09:00 ~ 15:30 일경우 StopTrade() 호출
-                    if (now.Hour < 9 || now.TimeOfDay >= new TimeSpan(15, 15, 00))
+                    if (now.TimeOfDay < startTime || now.TimeOfDay >= endTime)
                     {
                         throw new MarketClosedException();
                     }
@@ -104,7 +107,7 @@ namespace EbestTradeBot.Client.Services.Trade
                                 // 매수
                                 WriteLog?.Invoke(this, new LogEventArgs($"[{stock.Hname}({stock.Shcode})] [1차 매수]"));
                                 await _log.WriteLog(new() { StockName = stock.Hname, StockCode = stock.Shcode, Note = "1차 매수" });
-                                await BuyStock(stock);
+                                await BuyStock(stock, _defaultOptions.FirstTradePrice);
                                 if (_cancellationTokenSource.Token.IsCancellationRequested) break;
                             }
                         }
@@ -123,7 +126,7 @@ namespace EbestTradeBot.Client.Services.Trade
                                 // 매수
                                 WriteLog?.Invoke(this, new LogEventArgs($"[{stock.Hname}({stock.Shcode})] [2차 매수]"));
                                 await _log.WriteLog(new() { StockName = stock.Hname, StockCode = stock.Shcode, Note = "2차 매수" });
-                                await BuyStock(stock);
+                                await BuyStock(stock, _defaultOptions.SecondTradePrice);
                                 if (_cancellationTokenSource.Token.IsCancellationRequested) break;
                             }
                         }
@@ -157,11 +160,7 @@ namespace EbestTradeBot.Client.Services.Trade
                 }
                 catch (MarketClosedException) // 장종료 시
                 {
-                    var now = DateTime.Now;
-                    if(now.TimeOfDay >= new TimeSpan(15, 15, 00))
-                    {
-                        await SellAllStocks();
-                    }
+                    await SellAllStocks();
                     continue;
                 }
                 catch(Exception)
@@ -251,19 +250,9 @@ namespace EbestTradeBot.Client.Services.Trade
             await _openApi.SellStock(stock.Shcode, stock.보유량, _defaultOptions.IsTestTrade, _cancellationTokenSource.Token);
         }
 
-        private async Task BuyStock(Stock stock)
+        private async Task BuyStock(Stock stock, decimal price)
         {
-            int count = int.MinValue;
-
-            if(stock.보유량 <= 0) // 1차 매수
-            {
-                count = (int)(_defaultOptions.TradePrice / stock.현재가);
-            }
-            else // 2차 매수
-            {
-                count = stock.보유량;
-            }
-
+            int count = (int)(price / stock.현재가);
             await _openApi.BuyStock(stock.Shcode, count, _defaultOptions.IsTestTrade, _cancellationTokenSource.Token);
         }
         private async Task<List<Stock>> GetAccountStocks()
@@ -393,7 +382,7 @@ namespace EbestTradeBot.Client.Services.Trade
 
         private bool CheckFirstTrade(Stock stock)
         {
-            return (_defaultOptions.TradePrice * (decimal)1.1) - (stock.평단가 * stock.보유량) > 0;
+            return (_defaultOptions.FirstTradePrice * (decimal)1.1) > (stock.평단가 * stock.보유량);
         }
 
         private static List<Stock> DeepCopyStocks(List<Stock> original)

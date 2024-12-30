@@ -10,7 +10,7 @@
         xmlns:vm="clr-namespace:EbestTradeBot.Client.ViewModels" 
 				 d:DataContext="{d:DesignInstance Type=vm:ConfigurationViewModel}"
 				 prism:ViewModelLocator.AutoWireViewModel="True"
-        Title="옵션" Height="430" Width="640" ResizeMode="NoResize">
+        Title="옵션" Height="470" Width="640" ResizeMode="NoResize">
     <DockPanel Margin="2.5">
         <GroupBox DockPanel.Dock="Top" Margin="2.5" Header="Xing API">
             <StackPanel Orientation="Vertical" Margin="2.5">
@@ -66,14 +66,27 @@
                     </TextBox>
                 </StackPanel>
 				<StackPanel Orientation="Horizontal" Margin="2.5" HorizontalAlignment="Right">
-					<TextBlock Text="거래금액 :" Margin="2.5" VerticalAlignment="Center"/>
+					<TextBlock Text="1차매수금액 :" Margin="2.5" VerticalAlignment="Center"/>
 					<TextBox Margin="2.5" Width="125" VerticalAlignment="Center">
 						<TextBox.Text>
-							<Binding Path="DefaultOptions.TradePrice" StringFormat="N0"/>
+							<Binding Path="DefaultOptions.FirstTradePrice" StringFormat="N0"/>
+						</TextBox.Text>
+					</TextBox>
+					<TextBlock Text="2차매수금액 :" Margin="2.5" VerticalAlignment="Center"/>
+					<TextBox Margin="2.5" Width="125" VerticalAlignment="Center">
+						<TextBox.Text>
+							<Binding Path="DefaultOptions.SecondTradePrice" StringFormat="N0"/>
 						</TextBox.Text>
 					</TextBox>
 				</StackPanel>
-            </StackPanel>
+
+				<StackPanel Orientation="Horizontal" Margin="2.5" HorizontalAlignment="Right">
+					<TextBlock Text="시작시간 :" Margin="2.5" VerticalAlignment="Center"/>
+					<mah:TimePicker Margin="2.5" Width="125" VerticalAlignment="Center" SelectedDateTime="{Binding DefaultOptions.StartTime}"/>
+					<TextBlock Text="종료시간 :" Margin="2.5" VerticalAlignment="Center"/>
+					<mah:TimePicker Margin="2.5" Width="125" VerticalAlignment="Center" SelectedDateTime="{Binding DefaultOptions.EndTime}"/>
+				</StackPanel>
+			</StackPanel>
         </GroupBox>
 		<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="2.5">
 			<CheckBox Content="모의투자" Margin="2.5" VerticalAlignment="Center"
