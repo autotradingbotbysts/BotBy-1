@@ -102,7 +102,9 @@ namespace EbestTradeBot.Client.Services.Trade
                         {
                             if (
                                 !accountStocksForBuying.Any(x => x.Shcode == stock.Shcode) && // 보유중인 종목이 아님
-                                !tradingStocks.Contains(stock.Shcode)) // 현재 매매중인 종목이 아님
+                                !tradingStocks.Contains(stock.Shcode) && // 현재 매매중인 종목이 아님
+                                accountStocksForBuying.Count < 5 // 현재 계좌에 보유중인 종목이 5개 이하
+                                ) 
                             {
                                 // 매수
                                 WriteLog?.Invoke(this, new LogEventArgs($"[{stock.Hname}({stock.Shcode})] [1차 매수]"));
