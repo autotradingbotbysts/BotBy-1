@@ -36,6 +36,8 @@ namespace EbestTradeBot.Client.Services.Trade
         private readonly IOpenApiService _openApi;
         private readonly ILogService _log;
 
+        private bool _isTrading = false;
+
         private CancellationTokenSource _cancellationTokenSource = new();
 
         public event EventHandler WriteLog;
@@ -111,6 +113,8 @@ namespace EbestTradeBot.Client.Services.Trade
                                 await _log.WriteLog(new() { StockName = stock.Hname, StockCode = stock.Shcode, Note = "1차 매수" });
                                 await BuyStock(stock, _defaultOptions.FirstTradePrice);
                                 if (_cancellationTokenSource.Token.IsCancellationRequested) break;
+
+                                _isTrading = true;
                             }
                         }
 
@@ -162,7 +166,11 @@ namespace EbestTradeBot.Client.Services.Trade
                 }
                 catch (MarketClosedException) // 장종료 시
                 {
-                    await SellAllStocks();
+                    if(_isTrading)
+                    {
+                        await SellAllStocks();
+                        _isTrading = false;
+                    }
                     continue;
                 }
                 catch(Exception)
